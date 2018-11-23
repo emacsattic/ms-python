@@ -1,0 +1,1 @@
+Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][microsoft python language server]]
