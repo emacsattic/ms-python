@@ -5,5 +5,6 @@ Install [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] first, and either cl
 #+BEGIN_SRC emacs-lisp
 (require 'lsp-mode)
 (require 'ms-python)
+(setq ms-python-dir "/path/python-language-server/output/bin/Release/")
 (add-hook 'python-mode-hook #'lsp-ms-python-enable)
 #+END_SRC
