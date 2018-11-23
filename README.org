@@ -1,6 +1,16 @@
 Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][microsoft python language server]]
 
 * Installation
+** Build Server 
+1. Download the .NET Core SDK for your platform from [[https://www.microsoft.com/net/download][Microsoft’s .NET download site]] and install it.
+2. Build microsoft python language server
+   #+BEGIN_SRC shell
+git clone https://github.com/Microsoft/python-language-server.git
+cd python-language-server/src/LanguageServer/Impl
+dotnet build -c Release
+   #+END_SRC
+
+** Emacs
 Install [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] first, and either clone this repository. Add the following to your .emacs:
 #+BEGIN_SRC emacs-lisp
 (require 'lsp-mode)
@@ -8,3 +18,5 @@ Install [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] first, and either cl
 (setq ms-python-dir "/path/python-language-server/output/bin/Release/")
 (add-hook 'python-mode-hook #'lsp-ms-python-enable)
 #+END_SRC
+
+
