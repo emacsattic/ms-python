@@ -1,1 +1,9 @@
 Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][microsoft python language server]]
+
+* Installation
+Install [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] first, and either clone this repository. Add the following to your .emacs:
+#+BEGIN_SRC emacs-lisp
+(require 'lsp-mode)
+(require 'ms-python)
+(add-hook 'python-mode-hook #'lsp-ms-python-enable)
+#+END_SRC
