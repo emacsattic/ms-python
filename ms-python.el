@@ -46,19 +46,14 @@
   :type 'directory
   :group 'ms-python)
 
-(defcustom ms-python-database-dir
-  ".ms-pyls"
-  "Database directory."
-  :type 'directory
-  :group 'ms-python)
 
 ;;; Functions
 
-(defun get-python-ver-and-syspath (workspace-root)
-  "return list with pyver-string and json-encoded list of python search paths."
+(defun ms-python--get-python-env()
+  "Return list with pyver-string and json-encoded list of python search paths."
   (let ((python (executable-find python-shell-interpreter))
         (ver "import sys; print(f\"{sys.version_info[0]}.{sys.version_info[1]}\");")
-        (sp (concat "import json; sys.path.insert(0, '" workspace-root "'); print(json.dumps(sys.path))")))
+        (sp (concat "import json; sys.path.insert(0, '" default-directory "'); print(json.dumps(sys.path))")))
     (with-temp-buffer
       (call-process python nil t nil "-c" (concat ver sp))
       (subseq (split-string (buffer-string) "\n") 0 2))))
@@ -66,12 +61,13 @@
 ;; I based most of this on the vs.code implementation:
 ;; https://github.com/Microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServer.ts#L219
 ;; (it still took quite a while to get right, but here we are!)
-(defun ms-python-extra-init-params (workspace)
-  (destructuring-bind (pyver pysyspath) (get-python-ver-and-syspath (lsp--workspace-root workspace))
+(defun ms-python--initialization-options ()
+  "Return initialization-options for LP startup."
+  (destructuring-bind (pyver pysyspath) (ms-python--get-python-env)
     `(:interpreter (
                     :properties (
                                  :InterpreterPath ,(executable-find python-shell-interpreter)
-                                 :DatabasePath ,(file-name-as-directory (expand-file-name ms-python-database-dir (lsp--workspace-root workspace)))
+                                 :DatabasePath ,(file-name-as-directory (expand-file-name "db/" ms-python-dir))
                                  :Version ,pyver))
                    ;; preferredFormat "markdown" or "plaintext"
                    ;; experiment to find what works best -- over here mostly plaintext
@@ -86,10 +82,11 @@
 
 (lsp-register-client
  (make-lsp-client
-  :new-connection (lsp-stdio-connection (lambda()("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))))
+  :new-connection (lsp-stdio-connection
+                   (lambda() `("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))))
   :major-modes '(python-mode)
   :server-id 'ms-python
-  :initialization-options (lambda()(ms-python-extra-init-params))))
+  :initialization-options #'ms-python--initialization-options))
 
 (provide 'ms-python)
 ;;; ms-python.el ends here
