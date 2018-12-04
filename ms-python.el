@@ -33,7 +33,7 @@
 ;;; Commentary:
 
 ;;; Require
-(require 'lsp-mode)
+(require 'lsp)
 
 ;;; Code:
 ;;
@@ -84,11 +84,12 @@
                    :searchPaths ,(json-read-from-string pysyspath))))
 
 
-
-(lsp-define-stdio-client lsp-ms-python "python"
-                         nil
-                         `("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))
-                         :extra-init-params #'ms-python-extra-init-params)
+(lsp-register-client
+ (make-lsp-client
+  :new-connection (lsp-stdio-connection (lambda()("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))))
+  :major-modes '(python-mode)
+  :server-id 'ms-python
+  :initialization-options (lambda()(ms-python-extra-init-params))))
 
 (provide 'ms-python)
 ;;; ms-python.el ends here
