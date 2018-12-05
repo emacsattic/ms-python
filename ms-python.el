@@ -52,8 +52,19 @@
   :type 'directory
   :group 'ms-python)
 
+(defcustom ms-python-show-extra-message
+  t
+  "Show extra message like server started."
+  :type 'boolean
+  :group 'ms-python)
+
 
 ;;; Functions
+
+(defun ms-python--publish-server-started(workspace params)
+  "Publish server started in WORKSPACE according to PARAMS."
+  (when ms-python-show-extra-message
+    (message "Microsoft python language server started!")))
 
 (defun ms-python--get-python-env()
   "Return list with pyver-string and json-encoded list of python search paths."
@@ -92,6 +103,8 @@
                    (lambda() `("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))))
   :major-modes '(python-mode)
   :server-id 'ms-python
+  :notification-handlers
+  (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started))
   :initialization-options #'ms-python--initialization-options))
 
 (provide 'ms-python)
