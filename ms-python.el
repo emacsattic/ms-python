@@ -47,8 +47,9 @@
   :group 'ms-python)
 
 (defcustom ms-python-database-path
-  (expand-file-name "DefaultDB" ms-python-dir)
-  "Database storge directory. It should be absolute path."
+  "DefaultDB"
+  "Database storge directory.
+It is relative to `ms-python-dir',You can set a absolute path."
   :type 'directory
   :group 'ms-python)
 
@@ -84,7 +85,7 @@
     `(:interpreter (
                     :properties (
                                  :InterpreterPath ,(executable-find python-shell-interpreter)
-                                 :DatabasePath ,(file-name-as-directory ms-python-database-path)
+                                 :DatabasePath ,(file-name-as-directory (expand-file-name ms-python-database-path ms-python-dir))
                                  :Version ,pyver))
                    ;; preferredFormat "markdown" or "plaintext"
                    ;; experiment to find what works best -- over here mostly plaintext
