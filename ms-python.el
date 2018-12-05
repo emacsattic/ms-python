@@ -46,6 +46,12 @@
   :type 'directory
   :group 'ms-python)
 
+(defcustom ms-python-database-path
+  (expand-file-name "DefaultDB" ms-python-dir)
+  "Database storge directory. It should be absolute path."
+  :type 'directory
+  :group 'ms-python)
+
 
 ;;; Functions
 
@@ -67,8 +73,7 @@
     `(:interpreter (
                     :properties (
                                  :InterpreterPath ,(executable-find python-shell-interpreter)
-                                 ;; :DatabasePath ,(file-name-as-directory (expand-file-name "db/" ms-python-dir))
-                                 :UseDefaultDatabase true
+                                 :DatabasePath ,(file-name-as-directory ms-python-database-path)
                                  :Version ,pyver))
                    ;; preferredFormat "markdown" or "plaintext"
                    ;; experiment to find what works best -- over here mostly plaintext
@@ -79,6 +84,7 @@
                                     :trimDocumentationText :json-false
                                     :maxDocumentationTextLength 0)
                    :searchPaths ,(json-read-from-string pysyspath))))
+
 
 (lsp-register-client
  (make-lsp-client
