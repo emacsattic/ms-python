@@ -36,6 +36,7 @@
 ;;; Require:
 
 (require 'lsp)
+(require 'cl-lib)
 ;;; Code:
 ;;
 
