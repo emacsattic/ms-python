@@ -86,7 +86,7 @@ If not found, ask the user whether to install."
   "Return dotnet's path.If not found, ask the user whether to install."
   (let ((dotnet-exe (or
                      (and (file-directory-p ms-python-dotnet-install-dir)
-                          (car (directory-files ms-python-dotnet-install-dir t "^dotnet$"))) ;; Specified installation path
+                          (car (directory-files ms-python-dotnet-install-dir t "^dotnet\\(\\.exe\\)?$"))) ;; Specified installation path
                      (executable-find "dotnet"))))                               ;; System path
     (unless (and dotnet-exe
                  (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-runtimes"))))
@@ -100,19 +100,16 @@ If not found, ask the user whether to install."
 (defun ms-python--ensure-server()
   "Ensure Microsoft Python Language Server."
   (let* ((dotnet (ms-python--locate-dotnet))
-         (default-directory (concat temporary-file-directory "ms-python-install/"))
-         (server-dir ms-python-server-install-dir)
+         (default-directory ms-python-server-install-dir)
          (command)
          (log))
     (when (file-directory-p default-directory)
       (delete-directory default-directory t))
-    (when (file-directory-p server-dir)
-      (delete-directory server-dir t))
     (mkdir default-directory t)
-    (mkdir server-dir t)
-    (setq command (concat "git clone --depth 1 https://github.com/Microsoft/python-language-server.git"
-                          ";"
-                          dotnet " build -c Release -o " server-dir " python-language-server/src/LanguageServer/Impl"))
+    (setq command (concat "git clone --depth 1 https://github.com/Microsoft/python-language-server.git"))
+    (message "Clone server...")
+    (shell-command command)
+    (setq command (concat dotnet " build -c Release -o " default-directory " python-language-server/src/LanguageServer/Impl"))
     (message "Building server...")
     (setq log (shell-command-to-string command))
     (with-temp-buffer
@@ -122,24 +119,19 @@ If not found, ask the user whether to install."
         (message "%s" log)
         (error "Build server failed!You can check log message in *MESSAGE* buffer!"))
       (message "Build server finished.")
-      )
-    ))
+      )))
 
 (defun ms-python--ensure-dotnet()
   "Ensure dotnet sdk and runtime."
-  (let* ((default-directory (concat temporary-file-directory "ms-python-install/"))
-         (dotnet-dir ms-python-dotnet-install-dir)
-         (url-list (ms-python--dotnet--url))
+  (let* ((default-directory ms-python-dotnet-install-dir)
+         (url-list (ms-python--dotnet-url))
          (sdk-url (cdr (assoc 'sdk-url url-list)))
          (sdk-filename (cdr (assoc 'sdk-filename url-list)))
          (sdk-sha-filename (cdr (assoc 'sdk-sha-filename url-list)))
          )
     (when (file-directory-p default-directory)
       (delete-directory default-directory t))
-    (when (file-directory-p dotnet-dir)
-      (delete-directory dotnet-dir t))
     (mkdir default-directory t)
-    (mkdir dotnet-dir t)
     ;; download sdk
     (url-copy-file  sdk-url sdk-filename t)
     ;;  checksum
@@ -151,13 +143,13 @@ If not found, ask the user whether to install."
                                     (car (split-string (buffer-substring (line-beginning-position) (line-end-position)))))
                   (with-temp-buffer (insert-file-contents-literally sdk-filename)
                                     (upcase (secure-hash 'sha512 (current-buffer)))))))
-    (error "Download file failed.You can manually download %s, then decompress it to %s!"  sdk-filename dotnet-dir)
+    (error "Download file failed.You can manually download %s, then decompress it to %s!"  sdk-filename default-directory)
     ;; decompress
     (if (eq system-type 'windows-nt)
-        (unless (eq 0 (shell-command (concat "expand " sdk-filename " " dotnet-dir)))
-          (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename dotnet-dir))
+        (unless (eq 0 (shell-command (concat "expand " sdk-filename " " default-directory)))
+          (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename default-directory))
       (unless (eq 0 (shell-command (concat "tar -zxvf " sdk-filename " " dotnet-dir)))
-        (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename dotnet-dir)))))
+        (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename default-directory)))))
 
 (defun ms-python--dotnet-url()
   "Return url alist."
@@ -207,7 +199,7 @@ If not found, ask the user whether to install."
     `(:interpreter (
                     :properties (
                                  :InterpreterPath ,(executable-find python-shell-interpreter)
-                                 :DatabasePath ,(file-name-as-directory (expand-file-name ms-python-database-path ms-python-dir))
+                                 :DatabasePath ,(file-name-as-directory (expand-file-name ms-python-database-dir ms-python-server-install-dir))
                                  :Version ,pyver))
                    ;; preferredFormat "markdown" or "plaintext"
                    ;; experiment to find what works best -- over here mostly plaintext
