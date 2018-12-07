@@ -1,21 +1,53 @@
-Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][microsoft python language server]]
+* ms-python
+Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]]
 
 * Installation
-** Build Server 
-1. Download the .NET Core SDK for your platform from [[https://www.microsoft.com/net/download][Microsoft’s .NET download site]] and install it.
-2. Build microsoft python language server
-   #+BEGIN_SRC shell
-git clone https://github.com/Microsoft/python-language-server.git
-cd python-language-server/src/LanguageServer/Impl
-dotnet build -c Release
-   #+END_SRC
-
-** Emacs
-Install [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]] first, and either clone this repository. Add the following to your .emacs:
-#+BEGIN_SRC emacs-lisp
+1. First, you must install newest [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]].
+2. Download [[./ms-python.el][ms-python.el]] to =/path/to/elisp=
+3. Add =/path/to/elisp= into =load-path= and require it.
+   #+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path (expand-file-name "/path/to/elisp"))
 (require 'ms-python)
-(setq ms-python-dir "/path/python-language-server/output/bin/Release/")
 (add-hook 'python-mode-hook #'lsp)
+   #+END_SRC
+   
+* Server
+[[https://github.com/xhcoding/ms-python][ms-python]] will automatically detect when server is missing and it will build
+[[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] before first startup. 
+The server installation will be in =ms-python-server-install-dir=.
+If you have installed server, set =ms-python-server-install-dir= to your server 
+installation directory, which should contain
+=Microsoft.Python.LanguageServer.dll= file.
+#+BEGIN_SRC elisp
+(setq ms-python-server-install-dir "/path/to/server")
 #+END_SRC
 
+Building server requires [[https://www.microsoft.com/net/download][dotnet sdk]], which will detect dotnet executable file in
+=ms-python-dotnet-install-dir= or system path. If your have installed dotnet but
+dotnet dir is not in the system path, set =ms-python-dotnet-install-dir= to your dotnet dir.
+#+BEGIN_SRC elisp
+(setq ms-python-dotnet-install-dir "/path/to/dotnet")
+#+END_SRC
+* Flycheck
+[[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] does not support syntax checking for the time
+being, so you must change flycheck-checker to pyton-pylint or python-flake8 after lsp started up.
+#+BEGIN_SRC elisp
+(add-hook 'lsp-ui-mode-hook #'(lambda() (setq-local flycheck-checker 'python-pylint)))
+#+END_SRC
+* Pyvenv
+Because the server needs Python environment information before the server
+initialization,
+you must activate the virtual environment before call =lsp=.
 
+#+BEGIN_SRC elisp
+
+(defun +my-python/enable-lsp()
+  (unless pyvenv-virtual-env-name
+    (pyvenv-activate "/path/to/venv/"))
+  (lsp)
+  ;; You also can put the code for change checker here.
+  (setq-local flycheck-checker 'python-pylint))
+
+(add-hook 'python-mode-hook #'+my-python/enable-lsp)
+
+#+END_SRC

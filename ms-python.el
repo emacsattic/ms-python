@@ -2,13 +2,13 @@
 
 ;; Filename: ms-python.el
 ;; Description: A lsp client for microsoft python language server.
+;; Package-Requires: ((emacs "26.1") (lsp-mode "5.0"))
 ;; Author: Yong Cheng <xhcoding@163.com>
-;; Copyright (C) 2018, Yong Cheng, all right reserved
 ;; Created: 2018-11-22 08:16:00
-;; Version: 0.1
-;; Last-Update:
+;; Version: 1.0
+;; Last-Update: 2018-12-06 19:00
 ;; URL: https://github.com/xhcoding/ms-python
-;; Keywords: python
+;; Keywords: tools
 ;; Compatibility: GNU Emacs 26.1
 
 ;;; This file is NOT part of GNU Emacs
@@ -31,41 +31,163 @@
 ;; Floor, Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
+;; Please read README.org
 
-;;; Require
+;;; Require:
+
 (require 'lsp)
-
 ;;; Code:
 ;;
 
+(defgroup ms-python nil
+  "Microsoft python language server adapter for LSP mode."
+  :prefix "ms-python-"
+  :group 'applications
+  :link '(url-link :tag "GitHub" "https://github.com/xhcoding/ms-python"))
 
-;;; Custom
-(defcustom ms-python-dir
-  ""
-  "Dir containing Microsoft.Python.LanguageServer.dll."
-  :type 'directory
-  :group 'ms-python)
+;;; Custom:
+(defcustom ms-python-server-install-dir
+  (locate-user-emacs-file "ms-pyls/server/")
+  "Install directory for microsoft python language server."
+  :group 'ms-python
+  :risky t
+  :type 'directory)
 
-(defcustom ms-python-database-path
+(defcustom ms-python-dotnet-install-dir
+  (locate-user-emacs-file "ms-pyls/dotnet/")
+  "Install directory for dotnet."
+  :group 'ms-python
+  :risky t
+  :type 'directory)
+
+(defcustom ms-python-database-dir
   "DefaultDB"
-  "Database storge directory.
-It is relative to `ms-python-dir',You can set a absolute path."
-  :type 'directory
-  :group 'ms-python)
-
-(defcustom ms-python-show-extra-message
-  t
-  "Show extra message like server started."
-  :type 'boolean
-  :group 'ms-python)
+  "Cache data storge directory.
+It is relative to `ms-python-server-install-dir',You can set a absolute path."
+  :group 'ms-python
+  :risky t
+  :type 'directory)
 
 
-;;; Functions
+;;; Function:
 
-(defun ms-python--publish-server-started(workspace params)
-  "Publish server started in WORKSPACE according to PARAMS."
-  (when ms-python-show-extra-message
-    (message "Microsoft python language server started!")))
+(defun ms-python--locate-server-path()
+  "Return Microsoft.Python.LanguageServer.dll's path, it is server entry.
+If not found, ask the user whether to install."
+  (let* ((server-dir ms-python-server-install-dir)
+         (server-entry (expand-file-name "Microsoft.Python.LanguageServer.dll" server-dir)))
+    (unless (file-exists-p server-entry)
+      (if (yes-or-no-p "Microsoft Python Language Server is not installed. Do you want to install it?")
+          (ms-python--ensure-server)
+        (error "Cannot start microsoft python language server without server be installed!")))
+    server-entry))
+
+(defun ms-python--locate-dotnet()
+  "Return dotnet's path.If not found, ask the user whether to install."
+  (let ((dotnet-exe (or
+                     (and (file-directory-p ms-python-dotnet-install-dir)
+                          (car (directory-files ms-python-dotnet-install-dir t "^dotnet$"))) ;; Specified installation path
+                     (executable-find "dotnet"))))                               ;; System path
+    (unless (and dotnet-exe
+                 (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-runtimes"))))
+                 (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-sdks")))))
+      (if (yes-or-no-p "Dotnet is not installed. Do you want to install it?")
+          (ms-python--ensure-dotnet)
+        (error "Cannot install server without dotnet!"))
+      (setq dotnet-exe (car (directory-files ms-python-dotnet-install-dir t "^dotnet$"))))
+    dotnet-exe))
+
+(defun ms-python--ensure-server()
+  "Ensure Microsoft Python Language Server."
+  (let* ((dotnet (ms-python--locate-dotnet))
+         (default-directory (concat temporary-file-directory "ms-python-install/"))
+         (server-dir ms-python-server-install-dir)
+         (command)
+         (log))
+    (when (file-directory-p default-directory)
+      (delete-directory default-directory t))
+    (when (file-directory-p server-dir)
+      (delete-directory server-dir t))
+    (mkdir default-directory t)
+    (mkdir server-dir t)
+    (setq command (concat "git clone --depth 1 https://github.com/Microsoft/python-language-server.git"
+                          ";"
+                          dotnet " build -c Release -o " server-dir " python-language-server/src/LanguageServer/Impl"))
+    (message "Building server...")
+    (setq log (shell-command-to-string command))
+    (with-temp-buffer
+      (insert log)
+      (goto-char (point-min))
+      (unless (search-forward-regexp "Build succeeded." nil t)
+        (message "%s" log)
+        (error "Build server failed!You can check log message in *MESSAGE* buffer!"))
+      (message "Build server finished.")
+      )
+    ))
+
+(defun ms-python--ensure-dotnet()
+  "Ensure dotnet sdk and runtime."
+  (let* ((default-directory (concat temporary-file-directory "ms-python-install/"))
+         (dotnet-dir ms-python-dotnet-install-dir)
+         (url-list (ms-python--dotnet--url))
+         (sdk-url (cdr (assoc 'sdk-url url-list)))
+         (sdk-filename (cdr (assoc 'sdk-filename url-list)))
+         (sdk-sha-filename (cdr (assoc 'sdk-sha-filename url-list)))
+         )
+    (when (file-directory-p default-directory)
+      (delete-directory default-directory t))
+    (when (file-directory-p dotnet-dir)
+      (delete-directory dotnet-dir t))
+    (mkdir default-directory t)
+    (mkdir dotnet-dir t)
+    ;; download sdk
+    (url-copy-file  sdk-url sdk-filename t)
+    ;;  checksum
+    (url-copy-file (cdr (assoc 'sdk-sha-url url-list)) sdk-sha-filename)
+    (unless (and (and (file-exists-p sdk-filename) (file-exists-p sdk-sha-filename))
+                 (string=
+                  (with-temp-buffer (insert-file-contents sdk-sha-filename)
+                                    (search-forward-regexp sdk-filename)
+                                    (car (split-string (buffer-substring (line-beginning-position) (line-end-position)))))
+                  (with-temp-buffer (insert-file-contents-literally sdk-filename)
+                                    (upcase (secure-hash 'sha512 (current-buffer)))))))
+    (error "Download file failed.You can manually download %s, then decompress it to %s!"  sdk-filename dotnet-dir)
+    ;; decompress
+    (if (eq system-type 'windows-nt)
+        (unless (eq 0 (shell-command (concat "expand " sdk-filename " " dotnet-dir)))
+          (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename dotnet-dir))
+      (unless (eq 0 (shell-command (concat "tar -zxvf " sdk-filename " " dotnet-dir)))
+        (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename dotnet-dir)))))
+
+(defun ms-python--dotnet-url()
+  "Return url alist."
+  (let* ((root-url "https://dotnet.microsoft.com/download/thank-you")
+         (sdk-version "2.2.100")
+         (arch "x64")
+         (system (case system-type
+                   ('gnu/linux "linux")
+                   ('darwin "macos")
+                   ('windows-nt "windows")))
+         (suffix (if (string= system "windows")
+                     ".zip"
+                   ".tar.gz")))
+    `(
+      (sdk-url . ,(format "%s/dotnet-sdk-%s-%s-%s-binaries" root-url sdk-version system arch))
+      (sdk-sha-url . ,(format "https://dotnetcli.blob.core.windows.net/dotnet/checksums/%s-sdk-sha.txt" sdk-version))
+      (sdk-filename .,(format "dotnet-sdk-%s-%s-%s%s" sdk-version system arch suffix))
+      (sdk-sha-filename . ,(format "sdk-sha-%s.txt" sdk-version))
+      )))
+
+(defun ms-python--ls-command()
+  "LS startup command."
+  (let ((dotnet (ms-python--locate-dotnet))
+        (server (ms-python--locate-server-path)))
+    `(,dotnet
+      ,server)))
+
+(defun ms-python--publish-server-started(_workspace _params)
+  "Publish server started."
+  (message "Microsoft python language server started!"))
 
 (defun ms-python--get-python-env()
   "Return list with pyver-string and json-encoded list of python search paths."
@@ -97,16 +219,38 @@ It is relative to `ms-python-dir',You can set a absolute path."
                                     :maxDocumentationTextLength 0)
                    :searchPaths ,(json-read-from-string pysyspath))))
 
+(defun ms-python--doc-filter (doc)
+  "Filter some entities from DOC."
+  (let ((pairs [["&nbsp;" " "] ["" ""] ]))
+    (with-temp-buffer
+      (insert doc)
+      (mapc
+       (lambda (pair)
+         (goto-char (point-min))
+         (while (search-forward-regexp (elt pair 0) nil "noerrro")
+           (replace-match (elt pair 1))))
+       pairs)
+      (buffer-string))))
+
+;; lsp-ui-doc--extract gets called when hover docs are requested
+;; as always, we have to remove Microsoft's unnecessary some entities
+(advice-add 'lsp-ui-doc--extract
+            :filter-return #'ms-python--doc-filter)
+
+;; lsp-ui-sideline--format-info gets called when lsp-ui wants to show hover info in the sideline
+;; again some entities has to be removed
+(advice-add 'lsp-ui-sideline--format-info
+            :filter-return #'ms-python--doc-filter)
 
 (lsp-register-client
  (make-lsp-client
-  :new-connection (lsp-stdio-connection
-                   (lambda() `("dotnet" ,(concat ms-python-dir "Microsoft.Python.LanguageServer.dll"))))
+  :new-connection (lsp-stdio-connection #'ms-python--ls-command)
   :major-modes '(python-mode)
   :server-id 'ms-python
   :notification-handlers
   (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started))
   :initialization-options #'ms-python--initialization-options))
+
 
 (provide 'ms-python)
 ;;; ms-python.el ends here
