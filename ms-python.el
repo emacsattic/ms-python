@@ -90,8 +90,8 @@ If not found, ask the user whether to install."
                           (car (directory-files ms-python-dotnet-install-dir t "^dotnet\\(\\.exe\\)?$"))) ;; Specified installation path
                      (executable-find "dotnet"))))                               ;; System path
     (unless (and dotnet-exe
-                 (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-runtimes"))))
-                 (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-sdks")))))
+                 (not (string-empty-p (shell-command-to-string (format "%s --list-runtimes" dotnet-exe))))
+                 (not (string-empty-p (shell-command-to-string (format "%s --list-sdks" dotnet-exe)))))
       (error "Dotnet sdk not found!")
       )
     dotnet-exe))
@@ -105,11 +105,11 @@ If not found, ask the user whether to install."
     (when (file-directory-p default-directory)
       (delete-directory default-directory t))
     (mkdir default-directory t)
-    (setq command (concat "git clone --depth 1 https://github.com/Microsoft/python-language-server.git"))
+    (setq command "git clone --depth 1 https://github.com/Microsoft/python-language-server.git")
     (message "Clone server source: %s" command)
     (setq log (shell-command-to-string command))
     (message "%s\n" log)
-    (setq command (concat dotnet " build -c Release  python-language-server/src/LanguageServer/Impl"))
+    (setq command (format "%s build -c Release  python-language-server/src/LanguageServer/Impl" dotnet))
     (message "build server: %s" command)
     (setq log (shell-command-to-string command))
     (message "%s\n" log)
