@@ -1,4 +1,4 @@
-;;; ms-python.el --- A lsp client for microsoft python language server.
+;;; ms-python.el --- A lsp client for microsoft python language server.    -*- lexical-binding: t; -*-
 
 ;; Filename: ms-python.el
 ;; Description: A lsp client for microsoft python language server.
