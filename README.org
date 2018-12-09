@@ -1,8 +1,10 @@
 * ms-python
 Python support for lsp-mode using [[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]]
-
+* Screenshot
+[[./screenshots/company.png]]
 * Installation
-1. First, you must install newest [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]].
+** ms-python
+1. First, you must install newest [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]],[[https://github.com/emacs-lsp/lsp-ui][lsp-ui]]
 2. Download [[./ms-python.el][ms-python.el]] to =/path/to/elisp=
 3. Add =/path/to/elisp= into =load-path= and require it.
    #+BEGIN_SRC emacs-lisp
@@ -11,7 +13,9 @@ Python support for lsp-mode using [[https://github.com/Microsoft/python-language
 (add-hook 'python-mode-hook #'lsp)
    #+END_SRC
    
-* Server
+** Server
+First, you must install git and add it to your system path.
+
 [[https://github.com/xhcoding/ms-python][ms-python]] will automatically detect when server is missing and it will build
 [[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] before first startup. 
 The server installation will be in =ms-python-server-install-dir=.
@@ -28,13 +32,16 @@ dotnet dir is not in the system path, set =ms-python-dotnet-install-dir= to your
 #+BEGIN_SRC elisp
 (setq ms-python-dotnet-install-dir "/path/to/dotnet")
 #+END_SRC
-* Flycheck
+
+Using =ms-python-update-server= to update server.
+
+** Flycheck
 [[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] does not support syntax checking for the time
 being, so you must change flycheck-checker to pyton-pylint or python-flake8 after lsp started up.
 #+BEGIN_SRC elisp
 (add-hook 'lsp-ui-mode-hook #'(lambda() (setq-local flycheck-checker 'python-pylint)))
 #+END_SRC
-* Pyvenv
+** Pyvenv
 Because the server needs Python environment information before the server
 initialization,
 you must activate the virtual environment before call =lsp=.
@@ -51,3 +58,57 @@ you must activate the virtual environment before call =lsp=.
 (add-hook 'python-mode-hook #'+my-python/enable-lsp)
 
 #+END_SRC
+** Quick start
+Minimal configuration for emacs withou others configure. Download
+[[./ms-python.el][ms-python.el]] to =~/.emacs.d/lisp=
+#+BEGIN_SRC elisp
+(condition-case nil
+    (require 'use-package)
+  (file-error
+   (require 'package)
+   (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
+   (package-initialize)
+   (package-refresh-contents)
+   (package-install 'use-package)
+   (require 'use-package)))
+
+(use-package projectile
+  :ensure t)
+(use-package lsp-mode
+  :ensure t)
+(use-package lsp-ui
+  :ensure t
+  :config
+  (setq lsp-ui-doc-max-height 20
+	lsp-ui-doc-max-width 50
+	lsp-ui-sideline-ignore-duplicate t
+	lsp-ui-peek-always-show t))
+  
+(use-package company
+  :ensure t
+  :config
+  (setq company-minimum-prefix-length 1
+	company-idle-delay 0
+	company-tooltip-limit 10
+	company-transformers nil
+	company-show-numbers t
+	)
+  (global-company-mode +1))
+
+(use-package company-lsp
+  :ensure t
+  :commands (company-lsp)
+  )
+
+(use-package company-box
+  :ensure t
+  :hook (company-mode . company-box-mode))
+
+(use-package ms-python
+  :load-path (lambda() (expand-file-name "lisp" user-emacs-directory))
+  :config
+  (add-hook 'python-mode-hook #'lsp))
+
+#+END_SRC
+* Credit
+All creadit to [[https://vxlabs.com/2018/11/19/configuring-emacs-lsp-mode-and-microsofts-visual-studio-code-python-language-server/][vxlabs]] .

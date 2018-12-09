@@ -6,7 +6,7 @@
 ;; Author: Yong Cheng <xhcoding@163.com>
 ;; Created: 2018-11-22 08:16:00
 ;; Version: 1.0
-;; Last-Update: 2018-12-06 19:00
+;; Last-Update: 2018-12-09 10:00
 ;; URL: https://github.com/xhcoding/ms-python
 ;; Keywords: tools
 ;; Compatibility: GNU Emacs 26.1
@@ -36,7 +36,6 @@
 ;;; Require:
 
 (require 'lsp)
-(require 'cl-lib)
 ;;; Code:
 ;;
 
@@ -72,8 +71,9 @@ It is relative to `ms-python-server-install-dir',You can set a absolute path."
 
 ;;; Function:
 
-(defun ms-python--locate-server-path()
-  "Return Microsoft.Python.LanguageServer.dll's path, it is server entry.
+(defun ms-python--locate-server()
+  "Return the path of the server startup entry file.
+Its name is \"Microsoft.Python.LanguageServer.dll\".
 If not found, ask the user whether to install."
   (let* ((server-dir ms-python-server-install-dir)
          (server-entry (expand-file-name "Microsoft.Python.LanguageServer.dll" server-dir)))
@@ -92,10 +92,8 @@ If not found, ask the user whether to install."
     (unless (and dotnet-exe
                  (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-runtimes"))))
                  (not (string-empty-p (shell-command-to-string (concat dotnet-exe " --list-sdks")))))
-      (if (yes-or-no-p "Dotnet is not installed. Do you want to install it?")
-          (ms-python--ensure-dotnet)
-        (error "Cannot install server without dotnet!"))
-      (setq dotnet-exe (car (directory-files ms-python-dotnet-install-dir t "^dotnet$"))))
+      (error "Dotnet sdk not found!")
+      )
     dotnet-exe))
 
 (defun ms-python--ensure-server()
@@ -108,73 +106,35 @@ If not found, ask the user whether to install."
       (delete-directory default-directory t))
     (mkdir default-directory t)
     (setq command (concat "git clone --depth 1 https://github.com/Microsoft/python-language-server.git"))
-    (message "Clone server...")
-    (shell-command command)
-    (setq command (concat dotnet " build -c Release -o " default-directory " python-language-server/src/LanguageServer/Impl"))
-    (message "Building server...")
+    (message "Clone server source: %s" command)
     (setq log (shell-command-to-string command))
+    (message "%s\n" log)
+    (setq command (concat dotnet " build -c Release  python-language-server/src/LanguageServer/Impl"))
+    (message "build server: %s" command)
+    (setq log (shell-command-to-string command))
+    (message "%s\n" log)
     (with-temp-buffer
       (insert log)
       (goto-char (point-min))
       (unless (search-forward-regexp "Build succeeded." nil t)
-        (message "%s" log)
         (error "Build server failed!You can check log message in *MESSAGE* buffer!"))
+      (copy-directory "python-language-server/output/bin/Release" default-directory t t t)
+      (when (file-directory-p "python-language-server")
+        (delete-directory "python-language-server" t))
       (message "Build server finished.")
       )))
 
-(defun ms-python--ensure-dotnet()
-  "Ensure dotnet sdk and runtime."
-  (let* ((default-directory ms-python-dotnet-install-dir)
-         (url-list (ms-python--dotnet-url))
-         (sdk-url (cdr (assoc 'sdk-url url-list)))
-         (sdk-filename (cdr (assoc 'sdk-filename url-list)))
-         (sdk-sha-filename (cdr (assoc 'sdk-sha-filename url-list)))
-         )
-    (when (file-directory-p default-directory)
-      (delete-directory default-directory t))
-    (mkdir default-directory t)
-    ;; download sdk
-    (url-copy-file  sdk-url sdk-filename t)
-    ;;  checksum
-    (url-copy-file (cdr (assoc 'sdk-sha-url url-list)) sdk-sha-filename)
-    (unless (and (and (file-exists-p sdk-filename) (file-exists-p sdk-sha-filename))
-                 (string=
-                  (with-temp-buffer (insert-file-contents sdk-sha-filename)
-                                    (search-forward-regexp sdk-filename)
-                                    (car (split-string (buffer-substring (line-beginning-position) (line-end-position)))))
-                  (with-temp-buffer (insert-file-contents-literally sdk-filename)
-                                    (upcase (secure-hash 'sha512 (current-buffer)))))))
-    (error "Download file failed.You can manually download %s, then decompress it to %s!"  sdk-filename default-directory)
-    ;; decompress
-    (if (eq system-type 'windows-nt)
-        (unless (eq 0 (shell-command (concat "expand " sdk-filename " " default-directory)))
-          (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename default-directory))
-      (unless (eq 0 (shell-command (concat "tar -zxvf " sdk-filename " " dotnet-dir)))
-        (error "Decompress %s failed. you can manually decompress it to %s!" sdk-filename default-directory)))))
-
-(defun ms-python--dotnet-url()
-  "Return url alist."
-  (let* ((root-url "https://dotnet.microsoft.com/download/thank-you")
-         (sdk-version "2.2.100")
-         (arch "x64")
-         (system (case system-type
-                   ('gnu/linux "linux")
-                   ('darwin "macos")
-                   ('windows-nt "windows")))
-         (suffix (if (string= system "windows")
-                     ".zip"
-                   ".tar.gz")))
-    `(
-      (sdk-url . ,(format "%s/dotnet-sdk-%s-%s-%s-binaries" root-url sdk-version system arch))
-      (sdk-sha-url . ,(format "https://dotnetcli.blob.core.windows.net/dotnet/checksums/%s-sdk-sha.txt" sdk-version))
-      (sdk-filename .,(format "dotnet-sdk-%s-%s-%s%s" sdk-version system arch suffix))
-      (sdk-sha-filename . ,(format "sdk-sha-%s.txt" sdk-version))
-      )))
+(defun ms-python-update-server ()
+  "Update Microsoft python language server."
+  (interactive)
+  (message "Server update started...")
+  (ms-python--ensure-server)
+  (message "Server update finished..."))
 
 (defun ms-python--ls-command()
   "LS startup command."
   (let ((dotnet (ms-python--locate-dotnet))
-        (server (ms-python--locate-server-path)))
+        (server (ms-python--locate-server)))
     `(,dotnet
       ,server)))
 
@@ -189,14 +149,17 @@ If not found, ask the user whether to install."
         (sp (concat "import json; sys.path.insert(0, '" default-directory "'); print(json.dumps(sys.path))")))
     (with-temp-buffer
       (call-process python nil t nil "-c" (concat ver sp))
-      (subseq (split-string (buffer-string) "\n") 0 2))))
+      (let ((seq (split-string (buffer-string) "\n")))
+        `(,(nth 0 seq) ,(nth 1 seq))))))
 
 ;; I based most of this on the vs.code implementation:
 ;; https://github.com/Microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServer.ts#L219
 ;; (it still took quite a while to get right, but here we are!)
 (defun ms-python--initialization-options ()
   "Return initialization-options for LP startup."
-  (destructuring-bind (pyver pysyspath) (ms-python--get-python-env)
+  (let* ((python-env (ms-python--get-python-env))
+         (pyver (nth 0 python-env))
+         (pysyspath (nth 1 python-env)))
     `(:interpreter (
                     :properties (
                                  :InterpreterPath ,(executable-find python-shell-interpreter)
