@@ -14,7 +14,7 @@ Python support for lsp-mode using [[https://github.com/Microsoft/python-language
    #+END_SRC
    
 ** Server
-First, you must install git and add it to your system path.
+First, you must install [[https://git-scm.com][git]] and add it to your system path.
 
 [[https://github.com/xhcoding/ms-python][ms-python]] will automatically detect when server is missing and it will build
 [[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] before first startup. 
@@ -59,8 +59,7 @@ you must activate the virtual environment before call =lsp=.
 
 #+END_SRC
 ** Quick start
-Minimal configuration for emacs withou others configure. Download
-[[./ms-python.el][ms-python.el]] to =~/.emacs.d/lisp=
+Minimal configuration. Download [[./ms-python.el][ms-python.el]] to =~/.emacs.d/lisp=
 #+BEGIN_SRC elisp
 (condition-case nil
     (require 'use-package)
