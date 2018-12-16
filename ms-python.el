@@ -36,6 +36,10 @@
 ;;; Require:
 
 (require 'lsp)
+(require 'python)
+(require 'json)
+(require 'subr-x)
+
 ;;; Code:
 ;;
 
