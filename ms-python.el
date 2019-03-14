@@ -46,7 +46,7 @@
 (defgroup ms-python nil
   "Microsoft python language server adapter for LSP mode."
   :prefix "ms-python-"
-  :group 'applications
+  :group 'python
   :link '(url-link :tag "GitHub" "https://github.com/xhcoding/ms-python"))
 
 ;;; Custom:
@@ -208,7 +208,10 @@ If not found, ask the user whether to install."
   :major-modes '(python-mode)
   :server-id 'ms-python
   :notification-handlers
-  (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started))
+  (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started)
+          ("python/reportProgress" 'ignore)
+          ("python/beginProgress" 'ignore)
+          ("python/endProgress" 'ignore))
   :initialization-options #'ms-python--initialization-options))
 
 
