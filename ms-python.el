@@ -6,7 +6,7 @@
 ;; Author: Yong Cheng <xhcoding@163.com>
 ;; Created: 2018-11-22 08:16:00
 ;; Version: 1.0
-;; Last-Update: 2018-12-09 10:00
+;; Last-Update: 2018-03-18 12:00
 ;; URL: https://github.com/xhcoding/ms-python
 ;; Keywords: tools
 ;; Compatibility: GNU Emacs 26.1
@@ -179,28 +179,6 @@ If not found, ask the user whether to install."
                                     :maxDocumentationTextLength 0)
                    :searchPaths ,(json-read-from-string pysyspath))))
 
-(defun ms-python--doc-filter (doc)
-  "Filter some entities from DOC."
-  (let ((pairs [["&nbsp;" " "] ["" ""] ]))
-    (with-temp-buffer
-      (insert doc)
-      (mapc
-       (lambda (pair)
-         (goto-char (point-min))
-         (while (search-forward-regexp (elt pair 0) nil "noerrro")
-           (replace-match (elt pair 1))))
-       pairs)
-      (buffer-string))))
-
-;; lsp-ui-doc--extract gets called when hover docs are requested
-;; as always, we have to remove Microsoft's unnecessary some entities
-(advice-add 'lsp-ui-doc--extract
-            :filter-return #'ms-python--doc-filter)
-
-;; lsp-ui-sideline--format-info gets called when lsp-ui wants to show hover info in the sideline
-;; again some entities has to be removed
-(advice-add 'lsp-ui-sideline--format-info
-            :filter-return #'ms-python--doc-filter)
 
 (lsp-register-client
  (make-lsp-client
@@ -211,7 +189,8 @@ If not found, ask the user whether to install."
   (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started)
           ("python/reportProgress" 'ignore)
           ("python/beginProgress" 'ignore)
-          ("python/endProgress" 'ignore))
+          ("python/endProgress" 'ignore)
+          ("telemetry/event" 'ignore))
   :initialization-options #'ms-python--initialization-options))
 
 
