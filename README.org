@@ -4,6 +4,7 @@ Python support for lsp-mode using [[https://github.com/Microsoft/python-language
 [[./screenshots/company.png]]
 * Installation
 ** ms-python
+*** manual
 1. First, you must install newest [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]],[[https://github.com/emacs-lsp/lsp-ui][lsp-ui]]
 2. Download [[./ms-python.el][ms-python.el]] to =/path/to/elisp=
 3. Add =/path/to/elisp= into =load-path= and require it.
@@ -13,6 +14,8 @@ Python support for lsp-mode using [[https://github.com/Microsoft/python-language
 (add-hook 'python-mode-hook #'lsp)
    #+END_SRC
    
+*** Melpa
+M-x =package-install= [RET] =lsp-java= [RET]
 ** Server
 First, you must install [[https://git-scm.com][git]] and add it to your system path.
 
@@ -58,6 +61,9 @@ you must activate the virtual environment before call =lsp=.
 (add-hook 'python-mode-hook #'+my-python/enable-lsp)
 
 #+END_SRC
+
+** Debug
+[[https://github.com/emacs-lsp/dap-mode][dap-mode]]
 ** Quick start
 Minimal configuration. Download [[./ms-python.el][ms-python.el]] to =~/.emacs.d/lisp=
 #+BEGIN_SRC elisp
@@ -79,19 +85,19 @@ Minimal configuration. Download [[./ms-python.el][ms-python.el]] to =~/.emacs.d/
   :ensure t
   :config
   (setq lsp-ui-doc-max-height 20
-	lsp-ui-doc-max-width 50
-	lsp-ui-sideline-ignore-duplicate t
-	lsp-ui-peek-always-show t))
-  
+	    lsp-ui-doc-max-width 50
+	    lsp-ui-sideline-ignore-duplicate t
+	    lsp-ui-peek-always-show t))
+
 (use-package company
   :ensure t
   :config
   (setq company-minimum-prefix-length 1
-	company-idle-delay 0
-	company-tooltip-limit 10
-	company-transformers nil
-	company-show-numbers t
-	)
+	    company-idle-delay 0
+	    company-tooltip-limit 10
+	    company-transformers nil
+	    company-show-numbers t
+	    )
   (global-company-mode +1))
 
 (use-package company-lsp
@@ -104,7 +110,6 @@ Minimal configuration. Download [[./ms-python.el][ms-python.el]] to =~/.emacs.d/
   :hook (company-mode . company-box-mode))
 
 (use-package ms-python
-  :load-path (lambda() (expand-file-name "lisp" user-emacs-directory))
   :config
   (add-hook 'python-mode-hook #'lsp))
 

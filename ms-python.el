@@ -179,29 +179,21 @@ If not found, ask the user whether to install."
                                     :maxDocumentationTextLength 0)
                    :searchPaths ,(json-read-from-string pysyspath))))
 
-(defun ms-python--doc-filter (doc)
-  "Filter some entities from DOC."
-  (when doc
-    (let ((pairs [["&nbsp;" " "] ["" ""] ]))
-      (with-temp-buffer
-        (insert doc)
-        (mapc
-         (lambda (pair)
-           (goto-char (point-min))
-           (while (search-forward-regexp (elt pair 0) nil "noerrro")
-             (replace-match (elt pair 1))))
-         pairs)
-        (buffer-string)))))
+(defun ms-python--doc-filter-CM (doc)
+  "Filter  from DOC on Windows."
+  (when (and (eq system-type 'windows-nt) doc)
+    (replace-regexp-in-string "" "" doc)))
 
 ;; lsp-ui-doc--extract gets called when hover docs are requested
 ;; as always, we have to remove Microsoft's unnecessary some entities
-(advice-add 'lsp-ui-doc--extract
-            :filter-return #'ms-python--doc-filter)
+;; Windows only
 
-;; lsp-ui-sideline--format-info gets called when lsp-ui wants to show hover info in the sideline
-;; again some entities has to be removed
-(advice-add 'lsp-ui-sideline--format-info
-            :filter-return #'ms-python--doc-filter)
+(when (eq system-type 'windows-nt)
+  (advice-add 'lsp-ui-doc--extract
+              :filter-return #'ms-python--doc-filter-CM)
+
+  (advice-add 'lsp-ui-sideline--format-info
+              :filter-return #'ms-python--doc-filter-CM))
 
 
 (lsp-register-client
