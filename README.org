@@ -39,8 +39,11 @@ dotnet dir is not in the system path, set =ms-python-dotnet-install-dir= to your
 Using =ms-python-update-server= to update server.
 
 ** Flycheck
-[[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]] does not support syntax checking for the time
-being, so you must change flycheck-checker to pyton-pylint or python-flake8 after lsp started up.
+[[https://github.com/Microsoft/python-language-server][Microsoft Python Language Server]]  implements diagnostics (or linting). You can
+find a list of supported diagnostics on [[https://github.com/Microsoft/python-language-server#linting-options-diagnostics][linting-options-diagnostics]]. Set
+=ms-python-python-lint-enabled= to =nil= to disable diagnostics.
+ 
+If you want more diagnostics, you can change =flycheck-checker= to =pyton-pylint= or =python-flake8= after lsp started up.
 #+BEGIN_SRC elisp
 (add-hook 'lsp-ui-mode-hook #'(lambda() (setq-local flycheck-checker 'python-pylint)))
 #+END_SRC

@@ -72,6 +72,11 @@ It is relative to `ms-python-server-install-dir',You can set a absolute path."
   :risky t
   :type 'directory)
 
+(defcustom ms-python-python-lint-enabled t
+  "Enable or disable lint."
+  :group 'ms-python
+  :type 'boolean)
+
 
 ;;; Function:
 
@@ -195,6 +200,8 @@ If not found, ask the user whether to install."
   (advice-add 'lsp-ui-sideline--format-info
               :filter-return #'ms-python--doc-filter-CM))
 
+(lsp-register-custom-settings
+ '(("python.linting.enabled" ms-python-python-lint-enabled)))
 
 (lsp-register-client
  (make-lsp-client
@@ -205,9 +212,12 @@ If not found, ask the user whether to install."
   (lsp-ht ("python/languageServerStarted" #'ms-python--publish-server-started)
           ("python/reportProgress" 'ignore)
           ("python/beginProgress" 'ignore)
-          ("python/endProgress" 'ignore)
-          ("telemetry/event" 'ignore))
-  :initialization-options #'ms-python--initialization-options))
+          ("python/endProgress" 'ignore))
+  :initialization-options #'ms-python--initialization-options
+  :initialized-fn (lambda(workspace)
+                    (with-lsp-workspace workspace
+                      (lsp--set-configuration (lsp-configuration-section "python"))))
+  ))
 
 
 (provide 'ms-python)
